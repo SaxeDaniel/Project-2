@@ -2,33 +2,34 @@
 #include "driver/gpio.h"
 #include "esp_adc/adc_oneshot.h"
 
-
 //Defining Pins
+
 //LEDS
 #define GREEN_LED GPIO_NUM_10
 #define YELLOW_LED GPIO_NUM_11
+
 //BUTTONS
 #define DRIVER_OCC GPIO_NUM_5
 #define DRIVER_BELT GPIO_NUM_7
 #define PASS_OCC GPIO_NUM_4
 #define PASS_BELT GPIO_NUM_6
 #define IGNITION GPIO_NUM_8
+
 //BUZZER
 #define BUZZER GPIO_NUM_14
+
 //DELAY
-#define LOOP_DELAY_MS 25 // Loop delay
+#define LOOP_DELAY_MS 25
 
 // POTENTIOMETER
-#define POT_ADC_CH ADC2_CHANNEL_4   // GPIO15 = ADC1_CH4
+#define POT_ADC_CH ADC2_CHANNEL_4
 #define POT_ADC_GPIO GPIO_NUM_15
 
 // HEADLIGHTS
 #define HEADLIGHT_LED GPIO_NUM_12
-
 #define ADC_ATTEN       ADC_ATTEN_DB_12
 #define BITWIDTH        ADC_BITWIDTH_12
 #define DELAY_MS        10     
-
 #define DIAL_CHANNEL     ADC_CHANNEL_4
 #define SENSOR_CHANNEL   ADC_CHANNEL_2
 
@@ -36,12 +37,10 @@
 #define LIGHT_SENSOR GPIO_NUM_13
 
 
-void delay_ms(int t) { 
-    vTaskDelay(t / portTICK_PERIOD_MS); }
+void delay_ms(int t) { vTaskDelay(t / portTICK_PERIOD_MS); }
+
 
 void app_main(void) {
-
-
 
 adc_oneshot_unit_handle_t adc2_handle;              // Unit handle
         
@@ -89,8 +88,16 @@ adc_cali_create_scheme_curve_fitting(&cali_config, &adc2_cali_chan_handle);
         .pull_down_en = GPIO_PULLDOWN_DISABLE, 
         .intr_type = GPIO_INTR_DISABLE    
     };
+    //Configure HEADLIGHT_LED
+    gpio_config_t pot_out_io_conf = {
+    .pin_bit_mask = (1ULL << HEADLIGHT_LED),
+    .mode = GPIO_MODE_OUTPUT,
+    .pull_up_en = GPIO_PULLUP_DISABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .intr_type = GPIO_INTR_DISABLE
+    };
 
-    //Configuring Buttons
+    //Configuring Buttons / switches
 
     //Configuring DRIVER_OCC
     gpio_config_t driver_occ_io_conf = {
@@ -132,7 +139,6 @@ adc_cali_create_scheme_curve_fitting(&cali_config, &adc2_cali_chan_handle);
         .pull_down_en = GPIO_PULLDOWN_DISABLE, 
         .intr_type = GPIO_INTR_DISABLE    
     };
-
     //Configuring BUZZER
     gpio_config_t buzzer_io_conf = {
         .pin_bit_mask = (1ULL << BUZZER), 
@@ -141,16 +147,6 @@ adc_cali_create_scheme_curve_fitting(&cali_config, &adc2_cali_chan_handle);
         .pull_down_en = GPIO_PULLDOWN_DISABLE, 
         .intr_type = GPIO_INTR_DISABLE    
     };
-
-    //Configure head lights
-    gpio_config_t pot_out_io_conf = {
-    .pin_bit_mask = (1ULL << HEADLIGHT_LED),
-    .mode = GPIO_MODE_OUTPUT,
-    .pull_up_en = GPIO_PULLUP_DISABLE,
-    .pull_down_en = GPIO_PULLDOWN_DISABLE,
-    .intr_type = GPIO_INTR_DISABLE
-    };
-
     //Configuring light sensor
     gpio_config_t light_io_conf = {
     .pin_bit_mask = (1ULL << LIGHT_SENSOR), 
@@ -159,9 +155,6 @@ adc_cali_create_scheme_curve_fitting(&cali_config, &adc2_cali_chan_handle);
     .pull_down_en = GPIO_PULLDOWN_ENABLE, 
     .intr_type = GPIO_INTR_DISABLE    
     };
-
-ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
-
 
     //enabling configs and error checking
     ESP_ERROR_CHECK(gpio_config(&green_led_io_conf));
@@ -173,6 +166,8 @@ ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
     ESP_ERROR_CHECK(gpio_config(&ignition_io_conf));
     ESP_ERROR_CHECK(gpio_config(&buzzer_io_conf));
     ESP_ERROR_CHECK(gpio_config(&light_io_conf));
+    ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
+
 
     //defining variables
     bool driver_occupied_prev = false;
@@ -184,22 +179,20 @@ ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
     bool can_start = false;
     bool ignition_prev = false;
     bool engine_on = false;
-    int dial_bits;                        // dial reading (bits)
-    int dial_adc_mV;                          // dial reading (mV)
-    int sensor_bits;                        // light reading (bits)
-    int sensor_adc_mV;                          // light reading (mV)
-    int headlights = 0;
+    int dial_bits;
+    int dial_adc_mV;
+    int sensor_bits;
+    int sensor_adc_mV;
+    int headlights;
 
 
     //main loop
     while (1) {
 
-
     // Save previous ignition state
     ignition_prev = ignition;
     driver_occupied_prev = driver_occupied;
    
-
     // Read inputs (active low)
     driver_occupied = gpio_get_level(DRIVER_OCC) == 0;
     driver_belt     = gpio_get_level(DRIVER_BELT) == 0;
@@ -211,9 +204,9 @@ ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
     can_start = driver_occupied && driver_belt && pass_occupied && pass_belt;
 
     //welcome message
-        if (driver_occupied && !driver_occupied_prev) { //if driver seat is occupied
-            printf("Welcome to enhanced alarm system model 218-W25\n"); //print welcome message
-        }
+    if (driver_occupied && !driver_occupied_prev) { //if driver seat is occupied
+        printf("Welcome to enhanced alarm system model 218-W25\n"); //print welcome message
+    }
 
     // Green LED shows readiness (only when engine is off)
     if (!engine_on && can_start) {
@@ -238,6 +231,7 @@ ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
             gpio_set_level(HEADLIGHT_LED, headlights);
         }
         else {
+
             if (sensor_adc_mV>0){
                 headlights = 1;
                 delay_ms (1000);
@@ -273,7 +267,7 @@ ESP_ERROR_CHECK(gpio_config(&pot_out_io_conf));
             }
 
         }
-        // If engine is ON → shut it off
+        // When engine shuts off, turn off headlights and engine running light (yellow)
         else {
             headlights = 0;
             gpio_set_level(HEADLIGHT_LED, headlights);
