@@ -16,7 +16,7 @@
 #define IGNITION GPIO_NUM_8
 
 //BUZZER
-#define BUZZER GPIO_NUM_14
+#define BUZZER GPIO_NUM_47
 
 //DELAY
 #define LOOP_DELAY_MS 25
@@ -26,7 +26,7 @@
 #define POT_ADC_GPIO GPIO_NUM_15
 
 // HEADLIGHTS
-#define HEADLIGHT_LED GPIO_NUM_12
+#define HEADLIGHT_LED GPIO_NUM_21
 #define ADC_ATTEN       ADC_ATTEN_DB_12
 #define BITWIDTH        ADC_BITWIDTH_12
 #define DELAY_MS        10     
